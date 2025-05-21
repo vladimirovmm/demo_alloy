@@ -1,5 +1,5 @@
 /target
 **/.history
-data
+data/geth
 **/node_modules
 keys.private
