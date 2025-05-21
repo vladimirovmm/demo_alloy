@@ -1,0 +1,45 @@
+{
+    "files.watcherExclude": {
+        "**/node_modules": true,
+        "**/.history": true,
+        "**/target/**": true
+    },
+    "local-history.exclude": [
+        "**/.history/**",
+        "**/.vscode/**",
+        "**/node_modules/**",
+        "**/tpings/**",
+        "**/out/**",
+        "**/Code/User/**",
+        "**/target/**"
+    ],
+    "rust-analyzer.files.exclude": [
+        "**/.history/**",
+        "**/.vscode/**",
+        "**/node_modules/**",
+        "**/typings/**",
+        "**/out/**",
+        "**/Code/User/**",
+        "**/target/**"
+    ],
+    "search.exclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/*.code-search": true,
+        "**/target/**": true
+    },
+    "explorer.autoRevealExclude": {
+        "**/node_modules": true,
+        "**/bower_components": true,
+        "**/target/**": true
+    },
+    "rust-analyzer.check.ignore": [
+        "**/.history/**",
+        "**/.vscode/**",
+        "**/node_modules/**",
+        "**/typings/**",
+        "**/out/**",
+        "**/Code/User/**",
+        "**/target/**"
+    ],
+}

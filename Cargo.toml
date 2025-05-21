@@ -1,0 +1,16 @@
+[package]
+name = "ws_demo_eth"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tracing = "0.1.41"
+tracing-test = "0.2.5"
+hex = "0.4.3"
+tokio = { version = "1.45.0", features = ["macros", "rt-multi-thread"] }
+alloy-sol-types = "*"
+alloy-contract = "*"
+alloy = { version = "0.15.11", features = ["signer-keystore"] }
+eyre = "0.6.12"
+serde_json = "1.0.140"
+futures-util = "0.3"
