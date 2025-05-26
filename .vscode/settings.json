@@ -42,4 +42,10 @@
         "**/Code/User/**",
         "**/target/**"
     ],
+    "cSpell.words": [
+        "Переведённые",
+        "addrs",
+        "bstr",
+        "IERC"
+    ],
 }

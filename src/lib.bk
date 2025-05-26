@@ -489,14 +489,14 @@ mod tests {
 
         return;
 
-        // println!("# # # Тестирование вывода/withdrow на L1 ETH # # #");
+        // println!("# # # Тестирование вывода/Withdraw на L1 ETH # # #");
 
         // let old_balance = owner.client.get_balance(owner.key.address()).await.unwrap();
         // print!("Резервирование средств для вывода: ");
         // let tx = owner
         //     .contracts
         //     .bridge
-        //     .request_withdraw(alice.key.address())
+        //     .apply_withdrawal_request(alice.key.address())
         //     .value(Uint::from(1_000_000_000_000_000_u64))
         //     .send()
         //     .await
@@ -513,14 +513,14 @@ mod tests {
         //     new {new_balance_owner}"
         // );
 
-        // let withdrow_balance = alice
+        // let Withdraw_balance = alice
         //     .contracts
         //     .bridge
-        //     .status_withdraw()
+        //     .available_to_withdraw()
         //     .call()
         //     .await
         //     .unwrap();
-        // println!("Готово на вывод: {withdrow_balance}");
+        // println!("Готово на вывод: {Withdraw_balance}");
 
         // let old_balance = alice.client.get_balance(alice.key.address()).await.unwrap();
         // print!("Alice завершает вывод");
@@ -547,14 +547,14 @@ mod tests {
         // let balance_owner = owner.client.get_balance(owner.key.address()).await.unwrap();
         // assert_eq!(balance_owner, new_balance_owner);
 
-        // let withdrow_balance = alice
+        // let Withdraw_balance = alice
         //     .contracts
         //     .bridge
-        //     .status_withdraw()
+        //     .available_to_withdraw()
         //     .call()
         //     .await
         //     .unwrap();
-        // assert_eq!(withdrow_balance, Uint::ZERO);
+        // assert_eq!(Withdraw_balance, Uint::ZERO);
 
         // println!("# # # Перевод ERC20 токена # # #");
         // println!("Тестирование переводов на L2 ERC20");
@@ -698,7 +698,7 @@ mod tests {
         //     let tx = owner
         //         .contracts
         //         .bridge
-        //         .request_withdraw_erc20(token_address, user_address, amount)
+        //         .apply_withdrawal_request_erc20(token_address, user_address, amount)
         //         .send()
         //         .await
         //         .unwrap()
@@ -708,7 +708,7 @@ mod tests {
         //     println!("request withdraw tx: {tx}");
 
         //     let witrhdraw_amount = bridge
-        //         .status_withdraw_erc20(token_address)
+        //         .available_to_withdraw_erc20(token_address)
         //         .call()
         //         .await
         //         .unwrap();
@@ -732,7 +732,7 @@ mod tests {
         //     assert_eq!(new_balance, old_balance + amount);
 
         //     let witrhdraw_amount = bridge
-        //         .status_withdraw_erc20(token_address)
+        //         .available_to_withdraw_erc20(token_address)
         //         .call()
         //         .await
         //         .unwrap();

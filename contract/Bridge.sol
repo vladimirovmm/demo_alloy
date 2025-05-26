@@ -9,8 +9,10 @@ import "contract/IERC20.sol";
 contract Bridge {
     address owner;
     // the commission for the creation of the bridge
-    uint constant creation_commission_bridge = 1 ether;
-    uint constant max_amount = 18_446_744_073_709_551_615;
+    uint constant CREATION_COMMISSION_BRIDGE = 1 ether;
+    uint constant MAX_AMOUNT = 18_446_744_073_709_551_615;
+    uint8 constant DEFAULT_ETH_DECIMALS = 18;
+    uint8 constant DEFAULT_MOVE_DECIMALS = 8;
 
     struct BridgeTokenInfo {
         bool turn;
@@ -30,8 +32,8 @@ contract Bridge {
     );
 
     mapping (address => BridgeTokenInfo) BridgeTokens;
-    mapping (address => uint) WithdrowRequest;
-    mapping (address =>  mapping (address => uint)) WithdrowRequestErc20;
+    mapping (address => uint) WithdrawRequest;
+    mapping (address =>  mapping (address => uint)) WithdrawRequestErc20;
 
     constructor() {
         owner = msg.sender;
@@ -81,32 +83,32 @@ contract Bridge {
     // max: uint64
     function deposit(address receiver) payable public returns (bool) {
         uint256 amount_deposit = msg.value;
-        uint64 amount64 = uint64(convert_amount(amount_deposit, 18, 8));
+        uint64 amount64 = uint64(convert_amount(amount_deposit, DEFAULT_ETH_DECIMALS, DEFAULT_MOVE_DECIMALS));
         emit EventDeposit(msg.sender, receiver, amount64);
         return true;
     }
 
     // (ETH) L2 => L1
     // Owner: reserves coins for the client
-    function request_withdraw(address to, uint64 amount) payable public returns (bool) {
+    function apply_withdrawal_request(address to, uint64 amount) payable public returns (bool) {
         require(msg.sender == owner, "This request can only be completed by the owner");
-        WithdrowRequest[to] = WithdrowRequest[to] + convert_amount(amount, 8, 18);
+        WithdrawRequest[to] = WithdrawRequest[to] + convert_amount(amount, DEFAULT_MOVE_DECIMALS, DEFAULT_ETH_DECIMALS);
         return true;
     }
 
-    function status_withdraw() public view returns (uint) {
-        return WithdrowRequest[msg.sender];
+    function available_to_withdraw() public view returns (uint) {
+        return WithdrawRequest[msg.sender];
     }
 
     // (ETH) Withdraw => Client
     // The client withdraws the coins to his account
     function withdraw() payable public returns (bool) {
-        require(WithdrowRequest[msg.sender] > 0, "There are no funds for withdrawal");
-        uint amount = WithdrowRequest[msg.sender];
+        require(WithdrawRequest[msg.sender] > 0, "There are no funds for withdrawal");
+        uint amount = WithdrawRequest[msg.sender];
 
         require(address(this).balance > amount, "Insufficient funds in the wallet");
         payable(msg.sender).transfer(amount);
-        WithdrowRequest[msg.sender] = 0;
+        WithdrawRequest[msg.sender] = 0;
 
         return true;
     }
@@ -118,7 +120,7 @@ contract Bridge {
         require(settings.turn, "The bridge has not been created yet");
 
         amount = convert_amount(amount, settings.base_decimals, settings.decimals);
-        require(max_amount >= amount, "The amount exceeds the allowed maximum");
+        require(MAX_AMOUNT >= amount, "The amount exceeds the allowed maximum");
 
         return amount;
     }
@@ -142,7 +144,7 @@ contract Bridge {
         require(!BridgeTokens[tokenContract].turn, "The token has already been added");
 
         uint256 amount_deposit = msg.value;
-        require(amount_deposit == creation_commission_bridge, "A 1 ETH commission is required to create a bridge.");
+        require(amount_deposit == CREATION_COMMISSION_BRIDGE, "A 1 ETH commission is required to create a bridge.");
 
         IERC20 token = IERC20(tokenContract);
         string memory name = token.name();
@@ -150,8 +152,8 @@ contract Bridge {
         uint8 base_decimals = token.decimals();
 
         uint8 decimals;
-        if( base_decimals > 8 ){
-            decimals = 8;
+        if( base_decimals > DEFAULT_MOVE_DECIMALS ){
+            decimals = DEFAULT_MOVE_DECIMALS;
         }else{
             decimals = base_decimals;
         }
@@ -188,7 +190,7 @@ contract Bridge {
 
     // (ERC20) L2 => L1
     // Owner: reserves coins for the client
-    function request_withdraw_erc20(address tokenContract, address to, uint64 amount) payable public returns (bool){
+    function apply_withdrawal_request_erc20(address tokenContract, address to, uint64 amount) payable public returns (bool) {
         require(msg.sender == owner, "This request can only be completed by the owner");
 
         uint new_amount = convert_amount_to_l1(tokenContract, uint(amount));
@@ -198,28 +200,28 @@ contract Bridge {
         uint balance = token.balanceOf(address(this));
         require(balance > new_amount, "Insufficient funds to transfer funds from the wallet to the user");
 
-        WithdrowRequestErc20[to][tokenContract] = WithdrowRequestErc20[to][tokenContract] + new_amount;
+        WithdrawRequestErc20[to][tokenContract] = WithdrawRequestErc20[to][tokenContract] + new_amount;
         
         return true;
     }
 
-    function status_withdraw_erc20(address tokenContract) public view returns (uint){
-        return WithdrowRequestErc20[msg.sender][tokenContract];
+    function available_to_withdraw_erc20(address tokenContract) public view returns (uint) {
+        return WithdrawRequestErc20[msg.sender][tokenContract];
     }
 
     // (ERC20) Withdraw => Client
     // The client withdraws the coins to his account
-    function withdraw_erc20(address tokenContract) payable public returns (bool){
+    function withdraw_erc20(address tokenContract) payable public returns (bool) {
         require(BridgeTokens[tokenContract].turn, "The bridge has not been created yet");
         
-        uint withdraw_amount = WithdrowRequestErc20[msg.sender][tokenContract];
+        uint withdraw_amount = WithdrawRequestErc20[msg.sender][tokenContract];
         require(withdraw_amount > 0, "No withdrawal requests");
 
         IERC20 token = IERC20(tokenContract);
         bool send = token.transfer(msg.sender, withdraw_amount);
         require(send, "Failed to send");
 
-        WithdrowRequestErc20[msg.sender][tokenContract] = 0;
+        WithdrawRequestErc20[msg.sender][tokenContract] = 0;
 
         return true;
     }

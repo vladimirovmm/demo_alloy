@@ -78,11 +78,11 @@ macro_rules! contract_provider {
 
             if path.exists() {
                 let contract_address_str =
-                    fs::read_to_string(&path).context("При чтении адресса контракта произошла ошибка").unwrap();
+                    fs::read_to_string(&path).context("При чтении адреса контракта произошла ошибка").unwrap();
                 let contract_address = contract_address_str
                     .trim_end()
                     .parse::<Address>()
-                    .context("Неудалось преобразовать строку в адрес").unwrap();
+                    .context("Не удалось преобразовать строку в адрес").unwrap();
                 $contract_type::new(contract_address, provider.clone())
             }else{
                 let contract = $contract_type::deploy(provider).await.unwrap();
@@ -107,8 +107,8 @@ macro_rules! token_fund {
         let name = $token_contract.name().call().await.unwrap().to_string();
         println!("Name: {name}");
 
-        let sybmol = $token_contract.symbol().call().await.unwrap().to_string();
-        println!("Symbol: {sybmol}");
+        let symbol = $token_contract.symbol().call().await.unwrap().to_string();
+        println!("Symbol: {symbol}");
 
         let decimals = $token_contract.decimals().call().await.unwrap().to_string();
         println!("Decimals: {decimals}");
@@ -136,7 +136,7 @@ macro_rules! token_fund {
 }
 
 #[macro_export]
-macro_rules! tokens_balans {
+macro_rules! tokens_balance {
     ($user_address: ident, $( $tokens:expr ),*) => {{
         let mut temp_vec = Vec::new();
         $(

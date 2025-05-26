@@ -47,7 +47,7 @@ mod tests {
     /// ETH
     mod test_eth {
 
-        mod deposite {
+        mod deposit {
             use alloy::{primitives::U256, providers::Provider};
             use tokio::sync::mpsc;
             use tracing::info;
@@ -110,7 +110,7 @@ mod tests {
                     );
 
                     assert!(old_balance - new_balance > min_amount);
-                    // Переведеные деньги должны осесть на балансе моста
+                    // переведённые деньги должны осесть на балансе моста
                     assert_eq!(new_bridge_balance - old_bridge_balance, min_amount);
                 }
 
@@ -166,7 +166,7 @@ mod tests {
 
             #[tokio::test]
             #[traced_test]
-            async fn withdrow() {
+            async fn withdraw() {
                 let acc = init().await.unwrap();
 
                 // Запрос на вывод отправляется от owner
@@ -211,10 +211,10 @@ mod tests {
 
                     let amount = U256::from(10_u64.pow(14)); // 0.0001 ETH
 
-                    let old_withdraw_amount = bridge.status_withdraw().call().await.unwrap();
+                    let old_withdraw_amount = bridge.available_to_withdraw().call().await.unwrap();
                     info!("Разрешаем на вывод 0.00000001 ETH для {address}");
                     let tx = owner_bridge
-                        .request_withdraw(address, 10000) // 1 = 0.0001 ETH
+                        .apply_withdrawal_request(address, 10000) // 1 = 0.0001 ETH
                         .send()
                         .await
                         .unwrap()
@@ -229,7 +229,7 @@ mod tests {
                         owner_provider.get_balance(bridge_address).await.unwrap()
                     );
 
-                    let new_withdraw_amount = bridge.status_withdraw().call().await.unwrap();
+                    let new_withdraw_amount = bridge.available_to_withdraw().call().await.unwrap();
                     assert_eq!(
                         new_withdraw_amount - old_withdraw_amount,
                         amount,
@@ -247,7 +247,10 @@ mod tests {
                         .unwrap();
                     info!("tx: {tx:#?}");
 
-                    assert_eq!(bridge.status_withdraw().call().await.unwrap(), U256::ZERO);
+                    assert_eq!(
+                        bridge.available_to_withdraw().call().await.unwrap(),
+                        U256::ZERO
+                    );
 
                     let new_bridge_balance =
                         owner_provider.get_balance(bridge_address).await.unwrap();
@@ -268,26 +271,29 @@ mod tests {
 
             #[tokio::test]
             #[traced_test]
-            async fn withdrow_err_not_onwer() {
+            async fn withdraw_err_not_owner() {
                 let acc = init().await.unwrap();
 
                 for user in acc.into_iter().skip(1).take(2) {
                     let bridge = contract_provider!(Bridge, user);
 
-                    let res = bridge.request_withdraw(user.address(), 1).call().await;
+                    let res = bridge
+                        .apply_withdrawal_request(user.address(), 1)
+                        .call()
+                        .await;
                     assert!(res.is_err(), "{res:#?}");
                 }
             }
 
             #[tokio::test]
             #[traced_test]
-            async fn withdrow_err_without_approval() {
+            async fn withdraw_err_without_approval() {
                 let acc = init().await.unwrap();
 
                 for user in acc.into_iter().skip(1).take(2) {
                     let bridge = contract_provider!(Bridge, user);
 
-                    if bridge.status_withdraw().call().await.unwrap() != U256::ZERO {
+                    if bridge.available_to_withdraw().call().await.unwrap() != U256::ZERO {
                         continue;
                     }
 
@@ -327,7 +333,7 @@ mod tests {
                 init,
             };
 
-            // (ERC20) попытка подключить без коммиссии или с недостаточной комиссией
+            // (ERC20) попытка подключить без комиссии или с недостаточной комиссией
             #[tokio::test]
             #[traced_test]
             async fn err_commission() {
@@ -485,19 +491,19 @@ mod tests {
                 contracts::{Bridge, DemoERC20, ExmERC20, TestERC20},
                 init,
                 tests::tests_erc::calc_min_amount,
-                tokens_balans,
+                tokens_balance,
             };
 
             #[tokio::test]
             #[traced_test]
-            async fn deposite() {
+            async fn deposit() {
                 let acc = init().await.unwrap();
 
                 let console_handle = console::watch_logs(acc[0].clone()).await.unwrap();
 
                 let owner = acc[0].clone();
-                let onwer_bridge = contract_provider!(Bridge, owner);
-                let bridge_address = *onwer_bridge.address();
+                let owner_bridge = contract_provider!(Bridge, owner);
+                let bridge_address = *owner_bridge.address();
                 let demo_token = contract_provider!(DemoERC20, owner);
                 let test_token = contract_provider!(TestERC20, owner);
                 let exm_token = contract_provider!(ExmERC20, owner);
@@ -508,7 +514,7 @@ mod tests {
                     *exm_token.address(),
                 ];
                 for token_address in &tokens {
-                    if onwer_bridge
+                    if owner_bridge
                         .exist_bridge_erc20(*token_address)
                         .call()
                         .await
@@ -519,7 +525,7 @@ mod tests {
                     }
 
                     info!("Создание моста для токена {token_address}");
-                    let tx = onwer_bridge
+                    let tx = owner_bridge
                         .create_bridge_erc20(*token_address)
                         .value(U256::from(ETH_TO_WEI))
                         .send()
@@ -539,7 +545,7 @@ mod tests {
 
                 // Мониторинг событий пополнения депозита
                 let (sender, mut rec_deposit_events) = mpsc::channel(10);
-                let deposite_handle = watch_deposit_erc20_event(owner, sender).await.unwrap();
+                let deposit_handle = watch_deposit_erc20_event(owner, sender).await.unwrap();
 
                 for user in acc.into_iter().skip(1).take(2) {
                     let user_address = user.address();
@@ -574,13 +580,13 @@ mod tests {
                         .await
                         .unwrap();
 
-                    let old_user_balance = tokens_balans!(
+                    let old_user_balance = tokens_balance!(
                         user_address,
                         user_demo_token,
                         user_test_token,
                         user_exm_token
                     );
-                    let old_bridge_balance = tokens_balans!(
+                    let old_bridge_balance = tokens_balance!(
                         bridge_address,
                         user_demo_token,
                         user_test_token,
@@ -612,13 +618,13 @@ mod tests {
                         assert_eq!(tx.value, U256::from(1));
                     }
 
-                    let new_user_balance = tokens_balans!(
+                    let new_user_balance = tokens_balance!(
                         user_address,
                         user_demo_token,
                         user_test_token,
                         user_exm_token
                     );
-                    let new_bridge_balance = tokens_balans!(
+                    let new_bridge_balance = tokens_balance!(
                         bridge_address,
                         user_demo_token,
                         user_test_token,
@@ -650,7 +656,7 @@ mod tests {
                     }
                 }
                 console_handle.abort();
-                deposite_handle.abort();
+                deposit_handle.abort();
             }
 
             #[tokio::test]
@@ -765,7 +771,7 @@ mod tests {
                 contracts::{Bridge, DemoERC20, ExmERC20, TestERC20},
                 init,
                 tests::tests_erc::calc_min_amount,
-                token_fund, tokens_balans,
+                token_fund, tokens_balance,
             };
 
             #[tokio::test]
@@ -786,8 +792,8 @@ mod tests {
                 let bob_address = bob.address();
                 debug!("bob: {bob_address:?}");
 
-                let onwer_bridge = contract_provider!(Bridge, owner);
-                let bridge_address = *onwer_bridge.address();
+                let owner_bridge = contract_provider!(Bridge, owner);
+                let bridge_address = *owner_bridge.address();
                 debug!("bridge address: {bridge_address:?}");
 
                 let demo_token = contract_provider!(DemoERC20, owner);
@@ -810,7 +816,7 @@ mod tests {
 
                 // Проверка существования и создание мостов
                 for token_address in &tokens {
-                    if onwer_bridge
+                    if owner_bridge
                         .exist_bridge_erc20(*token_address)
                         .call()
                         .await
@@ -821,7 +827,7 @@ mod tests {
                     }
 
                     info!("Создание моста для токена {token_address}");
-                    let tx = onwer_bridge
+                    let tx = owner_bridge
                         .create_bridge_erc20(*token_address)
                         .value(U256::from(ETH_TO_WEI))
                         .send()
@@ -839,23 +845,23 @@ mod tests {
                     calc_min_amount(exm_token.decimals().call().await.unwrap()),
                 ];
 
-                let old_onwer_balance =
-                    tokens_balans!(owner_address, demo_token, test_token, exm_token);
+                let old_owner_balance =
+                    tokens_balance!(owner_address, demo_token, test_token, exm_token);
                 let old_alice_balance =
-                    tokens_balans!(alice_address, demo_token, test_token, exm_token);
+                    tokens_balance!(alice_address, demo_token, test_token, exm_token);
                 let old_bob_balance =
-                    tokens_balans!(bob_address, demo_token, test_token, exm_token);
+                    tokens_balance!(bob_address, demo_token, test_token, exm_token);
                 let old_bridge_balance =
-                    tokens_balans!(bridge_address, demo_token, test_token, exm_token);
+                    tokens_balance!(bridge_address, demo_token, test_token, exm_token);
 
                 for token_address in tokens {
                     for user in acc.iter().skip(1).take(2) {
                         let user_address = user.address();
                         info!(
-                            "Owner создаёт заявки на вывод токена {token_address:?} на адресс {user_address}"
+                            "Owner создаёт заявки на вывод токена {token_address:?} на адрес {user_address}"
                         );
-                        let tx = onwer_bridge
-                            .request_withdraw_erc20(token_address, user.address(), 1)
+                        let tx = owner_bridge
+                            .apply_withdrawal_request_erc20(token_address, user.address(), 1)
                             .send()
                             .await
                             .unwrap()
@@ -866,13 +872,13 @@ mod tests {
 
                         let bridge = contract_provider!(Bridge, user);
                         let withdraw_balance = bridge
-                            .status_withdraw_erc20(token_address)
+                            .available_to_withdraw_erc20(token_address)
                             .call()
                             .await
                             .unwrap();
                         assert_ne!(withdraw_balance, U256::ZERO);
 
-                        info!("Выводим токены {token_address:?} из моста на адресс {user_address}");
+                        info!("Выводим токены {token_address:?} из моста на адрес {user_address}");
                         let tx = bridge
                             .withdraw_erc20(token_address)
                             .send()
@@ -886,13 +892,13 @@ mod tests {
                 }
 
                 let new_owner_balance =
-                    tokens_balans!(owner_address, demo_token, test_token, exm_token);
+                    tokens_balance!(owner_address, demo_token, test_token, exm_token);
                 let new_alice_balance =
-                    tokens_balans!(alice_address, demo_token, test_token, exm_token);
+                    tokens_balance!(alice_address, demo_token, test_token, exm_token);
                 let new_bob_balance =
-                    tokens_balans!(bob_address, demo_token, test_token, exm_token);
+                    tokens_balance!(bob_address, demo_token, test_token, exm_token);
                 let new_bridge_balance =
-                    tokens_balans!(bridge_address, demo_token, test_token, exm_token);
+                    tokens_balance!(bridge_address, demo_token, test_token, exm_token);
 
                 for (old, new) in [
                     (old_alice_balance, new_alice_balance),
@@ -907,7 +913,7 @@ mod tests {
                     }
                 }
 
-                assert_eq!(old_onwer_balance, new_owner_balance);
+                assert_eq!(old_owner_balance, new_owner_balance);
 
                 dbg!(&old_bridge_balance, &new_bridge_balance);
 
@@ -937,7 +943,7 @@ mod tests {
                 let bridge = contract_provider!(Bridge, alice);
 
                 let res = bridge
-                    .request_withdraw_erc20(*demo_token.address(), alice.address(), 1)
+                    .apply_withdrawal_request_erc20(*demo_token.address(), alice.address(), 1)
                     .send()
                     .await;
                 debug!("{res:#?}");
