@@ -64,7 +64,23 @@
         {
             "label": "contract: test",
             "type": "shell",
-            "command": "cargo test -- test_accounts --nocapture",
+            "command": "cargo test -- tests::test_eth::deposit --nocapture",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "clear": true
+            },
+            "options": {
+                //     "cwd": "contract"
+            }
+        },
+        {
+            "label": "contract: drop cache",
+            "type": "shell",
+            "command": "rm /tmp/*.address",
             "problemMatcher": [],
             "group": {
                 "kind": "build",

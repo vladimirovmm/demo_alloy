@@ -5,12 +5,16 @@ geth__run:
 	geth init --datadir data data/genesis.json;
 	geth \
 		--dev \
-		--http --http.api eth,web3,net,engine --http.corsdomain "*" \
+		--http --http.api eth,web3,net,engine \
 		--ws --ws.api eth,web3,net,engine \
 		--datadir data \
 		--password password.txt \
-		--mine \
-		--gcmode archive
+		--gcmode archive \
+		# --syncmode "light" \
+		# --cache=1024
+		# --mine \
+		# --rpc.batch-request-limit 100000
+		# --dev.period 1 \
 		# --syncmode "fast" \
 
 geth__stop:
@@ -19,18 +23,26 @@ geth__stop:
 solc__build_and_deploy: solc__compile solc__depoloy
 
 solc__compile:
-	solc contract/Bridge.sol --optimize --combined-json bin,abi --via-ir > contract/combined_bridge.json
-	cat contract/combined_bridge.json | jq '.contracts' | jq '."contract/Bridge.sol:DemoERC20"' > contract/DemoERC20.json
-	cat contract/combined_bridge.json | jq '.contracts' | jq '."contract/Bridge.sol:Bridge"' > contract/Bridge.json
-	cat contract/combined_bridge.json | jq '.contracts' | jq '."contract/console.sol:console"' > contract/console.json
+	solc contract/Bridge.sol --optimize --combined-json bin,abi --via-ir \
+		| jq '.contracts' \
+		| jq '."contract/Bridge.sol:Bridge"' > contract/combined/Bridge.json
+	solc contract/console.sol --optimize --combined-json bin,abi --via-ir \
+		| jq '.contracts' \
+		| jq '."contract/console.sol:console"' > contract/combined/console.json
+
+	solc contract/Tokens.sol --optimize --combined-json bin,abi --via-ir > contract/combined/tokens.json
+	cat contract/combined/tokens.json | jq '.contracts' | jq '."contract/Tokens.sol:DemoERC20"' > contract/combined/DemoERC20.json
+	cat contract/combined/tokens.json | jq '.contracts' | jq '."contract/Tokens.sol:TestERC20"' > contract/combined/TestERC20.json
+	cat contract/combined/tokens.json | jq '.contracts' | jq '."contract/Tokens.sol:ExmERC20"' > contract/combined/ExmERC20.json
 
 solc__depoloy:
-	cargo test -- test_depoloy_contracts --nocapture
+	# rm /tmp/*.address || true
+	RUST_LOG=debug cargo run
 
-solc__deposite_compile:
-	solc contract/DepositeContract.sol --optimize --combined-json bin,abi --via-ir \
+solc__deposit_compile:
+	solc contract/depositContract.sol --optimize --combined-json bin,abi --via-ir \
 		| jq '.contracts' \
-		| jq '."contract/DepositeContract.sol:Deposite"' \
+		| jq '."contract/depositContract.sol:deposit"' \
 		> contract/deposit_contract.json
 
 contract__compile:
